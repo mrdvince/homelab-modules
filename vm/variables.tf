@@ -72,6 +72,18 @@ variable "agent_enabled" {
   default     = true
 }
 
+variable "agent_timeout" {
+  description = "Timeout for QEMU guest agent operations (e.g., '15m' for 15 minutes)"
+  type        = string
+  default     = "1m"
+}
+
+variable "stop_on_destroy" {
+  description = "Force stop VM on destroy instead of waiting for graceful shutdown"
+  type        = bool
+  default     = true
+}
+
 variable "os_type" {
   description = "OS type (l26 for Linux 2.6+)"
   type        = string

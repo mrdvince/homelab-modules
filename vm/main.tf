@@ -3,13 +3,14 @@ resource "proxmox_virtual_environment_vm" "instance" {
     for instance in var.instances : instance.vmname => instance
   }
 
-  name      = each.key
-  node_name = var.node_name
-  vm_id     = each.value.vmid
-  tags      = var.tags
-  on_boot   = var.on_boot
-  machine   = var.machine
-  bios      = var.bios
+  name            = each.key
+  node_name       = var.node_name
+  vm_id           = each.value.vmid
+  tags            = var.tags
+  on_boot         = var.on_boot
+  machine         = var.machine
+  bios            = var.bios
+  stop_on_destroy = var.stop_on_destroy
 
   cpu {
     cores   = var.cores
@@ -24,6 +25,7 @@ resource "proxmox_virtual_environment_vm" "instance" {
 
   agent {
     enabled = var.agent_enabled
+    timeout = var.agent_timeout
   }
 
   network_device {
