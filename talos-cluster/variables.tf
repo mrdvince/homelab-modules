@@ -13,6 +13,12 @@ variable "controlplane_nodes" {
   type        = list(string)
 }
 
+variable "talos_endpoints" {
+  description = "Endpoints for talosctl (defaults to VIP if set, otherwise controlplane nodes)"
+  type        = list(string)
+  default     = null
+}
+
 variable "worker_nodes" {
   description = "List of worker node IPs"
   type        = list(string)
@@ -78,4 +84,39 @@ variable "cni" {
   description = "CNI plugin to use (none, flannel, etc.)"
   type        = string
   default     = "none"
+}
+
+variable "install_cilium" {
+  description = "Install Cilium CNI via Helm"
+  type        = bool
+  default     = true
+}
+
+variable "cilium_version" {
+  description = "Cilium Helm chart version"
+  type        = string
+  default     = "1.18.4"
+}
+
+variable "cilium" {
+  description = "Cilium configuration"
+  type = object({
+    k8s_service_host  = optional(string, "localhost")
+    k8s_service_port  = optional(number, 7445)
+    cgroup_host_root  = optional(string, "/sys/fs/cgroup")
+    operator_replicas = optional(number, 2)
+  })
+  default = {}
+}
+
+variable "extensions" {
+  description = "List of Talos system extensions to install (e.g., qemu-guest-agent, iscsi-tools)"
+  type        = list(string)
+  default     = []
+}
+
+variable "auto_upgrade" {
+  description = "Automatically upgrade nodes when talos_version or extensions change"
+  type        = bool
+  default     = false
 }

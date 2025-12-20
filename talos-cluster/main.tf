@@ -80,11 +80,18 @@ data "talos_machine_configuration" "worker" {
   talos_version    = var.talos_version
 }
 
+locals {
+  talos_endpoints = coalesce(
+    var.talos_endpoints,
+    var.network.vip != null ? [var.network.vip] : var.controlplane_nodes
+  )
+}
+
 data "talos_client_configuration" "this" {
   cluster_name         = var.cluster_name
   client_configuration = talos_machine_secrets.this.client_configuration
   nodes                = var.controlplane_nodes
-  endpoints            = var.controlplane_nodes
+  endpoints            = local.talos_endpoints
 }
 
 resource "talos_machine_configuration_apply" "controlplane" {

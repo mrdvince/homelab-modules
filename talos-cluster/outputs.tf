@@ -27,3 +27,13 @@ output "machine_secrets" {
   value       = talos_machine_secrets.this.machine_secrets
   sensitive   = true
 }
+
+output "schematic_id" {
+  description = "Image factory schematic ID"
+  value       = talos_image_factory_schematic.this.id
+}
+
+output "installer_image" {
+  description = "Installer image URL (includes extensions if configured)"
+  value       = data.talos_image_factory_urls.this.urls.installer
+}
