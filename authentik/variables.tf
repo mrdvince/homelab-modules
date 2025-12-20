@@ -7,7 +7,8 @@ variable "sub_mode" {
 }
 
 variable "policy_expression" {
-  type = map(any)
+  type    = map(any)
+  default = null
 }
 
 variable "authentik_application" {
@@ -26,4 +27,31 @@ variable "groups" {
 variable "signing_key_name" {
   description = "Name of the certificate key pair for JWT signing"
   default     = "authentik Self-signed Certificate"
+}
+
+variable "proxy_application" {
+  description = "Map of proxy applications for forward auth"
+  type = map(object({
+    name          = optional(string)
+    external_host = string
+    mode          = optional(string, "forward_single")
+    cookie_domain = optional(string)
+    skip_path_regex = optional(string)
+  }))
+  default = {}
+}
+
+variable "outpost_name" {
+  description = "Name of the outpost for proxy providers"
+  default     = "forward-auth-outpost"
+}
+
+variable "docker_service_connection" {
+  description = "Docker service connection config. Use 'id' to reference existing, or 'name' to create new."
+  type = object({
+    id   = optional(string)
+    name = optional(string)
+    url  = optional(string, "unix:///var/run/docker.sock")
+  })
+  default = null
 }
