@@ -105,7 +105,7 @@ resource "authentik_service_connection_docker" "this" {
 
 locals {
   created_connection_id = one(authentik_service_connection_docker.this[*].id)
-  service_connection_id = try(var.docker_service_connection.id, local.created_connection_id)
+  service_connection_id = var.docker_service_connection != null ? coalesce(var.docker_service_connection.id, local.created_connection_id) : null
 }
 
 resource "authentik_outpost" "proxy" {
