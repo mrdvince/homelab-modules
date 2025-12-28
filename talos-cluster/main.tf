@@ -155,8 +155,25 @@ resource "null_resource" "talosconfig_merge" {
     command = <<-EOT
       mkdir -p ~/.talos
       echo '${data.talos_client_configuration.this.talos_config}' > talosconfig-${var.cluster_name}.yaml
-      talosctl config merge talosconfig-${var.cluster_name}.yaml
-      rm -f talosconfig-${var.cluster_name}.yaml
+
+      # check if other clusters exist (contexts not matching our cluster name)
+      # column 2 is NAME when current (*), column 1 when not current
+      OTHER_CTX=$(talosctl config contexts 2>/dev/null | awk 'NR>1 && !/'"${var.cluster_name}"'/ {print ($1=="*" ? $2 : $1); exit}')
+
+      if [ -z "$OTHER_CTX" ]; then
+        # no other clusters, safe to overwrite entirely
+        mv talosconfig-${var.cluster_name}.yaml ~/.talos/config
+      else
+        # other clusters exist, need to preserve them
+        # switch to another context first so we can remove ours
+        talosctl config context "$OTHER_CTX"
+        for ctx in $(talosctl config contexts 2>/dev/null | awk '/'"${var.cluster_name}"'/ {print ($1=="*" ? $2 : $1)}'); do
+          talosctl config remove "$ctx" --noconfirm 2>/dev/null || true
+        done
+        talosctl config merge talosconfig-${var.cluster_name}.yaml
+        rm -f talosconfig-${var.cluster_name}.yaml
+      fi
+
       talosctl config context ${var.cluster_name}
     EOT
   }
