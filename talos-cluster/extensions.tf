@@ -45,7 +45,8 @@ resource "null_resource" "upgrade_controlplane" {
         sleep 30
 
         for i in $(seq 1 60); do
-          if talosctl version --nodes "$node" 2>/dev/null | grep -q "$TARGET_VERSION"; then
+          SERVER_VERSION=$(talosctl version --nodes "$node" 2>/dev/null | awk '/^Server:/{server=1} server && /Tag:/{print $2; exit}')
+          if [ "$SERVER_VERSION" = "$TARGET_VERSION" ]; then
             STAGE=$(talosctl get machinestatus --nodes "$node" -o jsonpath='{.spec.stage}' 2>/dev/null || echo "")
             if [ "$STAGE" = "running" ]; then
               echo "$node is running $TARGET_VERSION"
@@ -57,10 +58,11 @@ resource "null_resource" "upgrade_controlplane" {
         done
 
         echo "waiting for kubernetes node to be ready..."
-        until kubectl get node "$node" -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}' 2>/dev/null | grep -q "True"; do
+        NODE_NAME=$(kubectl get nodes -o json | jq -r '.items[] | select(.status.addresses[] | select(.type=="InternalIP" and .address=="'"$node"'")) | .metadata.name')
+        until kubectl get node "$NODE_NAME" -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}' 2>/dev/null | grep -q "True"; do
           sleep 5
         done
-        echo "$node upgrade complete"
+        echo "$node ($NODE_NAME) upgrade complete"
       done
     EOT
   }
@@ -87,7 +89,8 @@ resource "null_resource" "upgrade_workers" {
         sleep 30
 
         for i in $(seq 1 60); do
-          if talosctl version --nodes "$node" 2>/dev/null | grep -q "$TARGET_VERSION"; then
+          SERVER_VERSION=$(talosctl version --nodes "$node" 2>/dev/null | awk '/^Server:/{server=1} server && /Tag:/{print $2; exit}')
+          if [ "$SERVER_VERSION" = "$TARGET_VERSION" ]; then
             STAGE=$(talosctl get machinestatus --nodes "$node" -o jsonpath='{.spec.stage}' 2>/dev/null || echo "")
             if [ "$STAGE" = "running" ]; then
               echo "$node is running $TARGET_VERSION"
@@ -99,10 +102,11 @@ resource "null_resource" "upgrade_workers" {
         done
 
         echo "waiting for kubernetes node to be ready..."
-        until kubectl get node "$node" -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}' 2>/dev/null | grep -q "True"; do
+        NODE_NAME=$(kubectl get nodes -o json | jq -r '.items[] | select(.status.addresses[] | select(.type=="InternalIP" and .address=="'"$node"'")) | .metadata.name')
+        until kubectl get node "$NODE_NAME" -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}' 2>/dev/null | grep -q "True"; do
           sleep 5
         done
-        echo "$node upgrade complete"
+        echo "$node ($NODE_NAME) upgrade complete"
       done
     EOT
   }
