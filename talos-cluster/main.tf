@@ -100,6 +100,7 @@ resource "talos_machine_configuration_apply" "controlplane" {
   machine_configuration_input = data.talos_machine_configuration.controlplane.machine_configuration
   node                        = each.value
   config_patches              = local.controlplane_config_patches
+  apply_mode                  = var.config_apply_mode
 }
 
 resource "talos_machine_configuration_apply" "worker" {
@@ -108,6 +109,7 @@ resource "talos_machine_configuration_apply" "worker" {
   machine_configuration_input = data.talos_machine_configuration.worker[0].machine_configuration
   node                        = each.value
   config_patches              = local.worker_config_patches
+  apply_mode                  = var.config_apply_mode
 }
 
 resource "talos_machine_bootstrap" "this" {

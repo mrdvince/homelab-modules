@@ -120,3 +120,13 @@ variable "auto_upgrade" {
   type        = bool
   default     = false
 }
+
+variable "config_apply_mode" {
+  description = "Mode for applying config changes: auto, reboot, staged, no_reboot"
+  type        = string
+  default     = "auto"
+  validation {
+    condition     = contains(["auto", "reboot", "staged", "no_reboot"], var.config_apply_mode)
+    error_message = "config_apply_mode must be one of: auto, reboot, staged, no_reboot"
+  }
+}
