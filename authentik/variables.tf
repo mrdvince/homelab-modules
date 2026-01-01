@@ -32,10 +32,10 @@ variable "signing_key_name" {
 variable "proxy_application" {
   description = "Map of proxy applications for forward auth"
   type = map(object({
-    name          = optional(string)
-    external_host = string
-    mode          = optional(string, "forward_single")
-    cookie_domain = optional(string)
+    name            = optional(string)
+    external_host   = string
+    mode            = optional(string, "forward_single")
+    cookie_domain   = optional(string)
     skip_path_regex = optional(string)
   }))
   default = {}
@@ -54,4 +54,16 @@ variable "docker_service_connection" {
     url  = optional(string, "unix:///var/run/docker.sock")
   })
   default = null
+}
+
+variable "service_accounts" {
+  description = "Map of service accounts for machine-to-machine authentication"
+  type = map(object({
+    name              = optional(string)
+    path              = optional(string, "service-accounts")
+    groups            = optional(list(string), [])
+    token_description = optional(string)
+    token_expiring    = optional(bool, false)
+  }))
+  default = {}
 }
