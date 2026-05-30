@@ -3,6 +3,19 @@ resource "talos_machine_secrets" "this" {
 }
 
 locals {
+  raw_worker_node_endpoints_by_name = length(var.worker_node_endpoints) > 0 ? var.worker_node_endpoints : length(var.worker_node_ips) > 0 ? {
+    for name, endpoint in var.worker_node_ips : name => { endpoint = endpoint }
+    } : {
+    for worker_node in var.worker_nodes : worker_node => { endpoint = worker_node }
+  }
+  worker_node_endpoints_by_name = {
+    for name, node in local.raw_worker_node_endpoints_by_name : name => node
+    if node.endpoint != null
+  }
+  worker_node_endpoints = [
+    for node in values(local.worker_node_endpoints_by_name) : node.endpoint
+  ]
+
   base_config_patch = yamlencode({
     machine = {
       network = {
@@ -83,7 +96,7 @@ data "talos_machine_configuration" "controlplane" {
 }
 
 data "talos_machine_configuration" "worker" {
-  count            = length(var.worker_nodes) > 0 ? 1 : 0
+  count            = length(local.worker_node_endpoints_by_name) > 0 ? 1 : 0
   cluster_name     = var.cluster_name
   machine_type     = "worker"
   cluster_endpoint = var.cluster_endpoint
@@ -115,12 +128,43 @@ resource "talos_machine_configuration_apply" "controlplane" {
 }
 
 resource "talos_machine_configuration_apply" "worker" {
-  for_each                    = toset(var.worker_nodes)
+  for_each                    = local.worker_node_endpoints_by_name
   client_configuration        = talos_machine_secrets.this.client_configuration
   machine_configuration_input = data.talos_machine_configuration.worker[0].machine_configuration
-  node                        = each.value
-  config_patches              = local.worker_config_patches
-  apply_mode                  = var.config_apply_mode
+  node                        = each.value.endpoint
+  config_patches = concat(
+    local.worker_config_patches,
+    [
+      yamlencode({
+        machine = {
+          network = {
+            hostname = each.key
+          }
+        }
+      })
+    ],
+    length(lookup(var.worker_node_initial_taints, each.key, [])) > 0 ? [
+      yamlencode({
+        machine = {
+          kubelet = {
+            extraConfig = {
+              registerWithTaints = [
+                for taint in lookup(var.worker_node_initial_taints, each.key, []) : merge(
+                  {
+                    key    = taint.key
+                    effect = taint.effect
+                  },
+                  taint.value != null ? { value = taint.value } : {}
+                )
+              ]
+            }
+          }
+        }
+      })
+    ] : [],
+    lookup(var.worker_node_patches, each.key, [])
+  )
+  apply_mode = var.config_apply_mode
 }
 
 resource "talos_machine_bootstrap" "this" {

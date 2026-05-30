@@ -25,6 +25,20 @@ variable "worker_nodes" {
   default     = []
 }
 
+variable "worker_node_ips" {
+  description = "Map of worker node names to IPs"
+  type        = map(string)
+  default     = {}
+}
+
+variable "worker_node_endpoints" {
+  description = "Map of worker node names to Talos API endpoints"
+  type = map(object({
+    endpoint = string
+  }))
+  default = {}
+}
+
 variable "talos_version" {
   description = "Talos version for machine configuration"
   type        = string
@@ -56,6 +70,22 @@ variable "worker_patches" {
   description = "Config patches applied only to worker nodes"
   type        = list(string)
   default     = []
+}
+
+variable "worker_node_patches" {
+  description = "Config patches applied to individual worker nodes, keyed by worker node name"
+  type        = map(list(string))
+  default     = {}
+}
+
+variable "worker_node_initial_taints" {
+  description = "Initial kubelet registerWithTaints entries for individual worker nodes, keyed by worker node name. Talos only applies these when the Kubernetes Node object is first registered."
+  type = map(list(object({
+    key    = string
+    value  = optional(string)
+    effect = string
+  })))
+  default = {}
 }
 
 variable "kubernetes" {
