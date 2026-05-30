@@ -11,8 +11,19 @@ variable "ssh_private_key_path" {
   type = string
 }
 
+variable "create_logs" {
+  type    = bool
+  default = false
+}
+
+variable "create_metrics" {
+  type    = bool
+  default = false
+}
+
 variable "loki_url" {
-  type = string
+  type    = string
+  default = null
 }
 
 variable "loki_username" {
@@ -22,6 +33,7 @@ variable "loki_username" {
 
 variable "loki_password" {
   type      = string
+  default   = null
   sensitive = true
 }
 
@@ -88,5 +100,52 @@ variable "file_logs" {
       path     = "/var/log/kern.log"
       log_file = "kernel"
     },
+    {
+      path     = "/var/lib/docker/containers/*/*.log"
+      log_file = "docker"
+      job      = "docker-file"
+    },
   ]
+}
+
+variable "prometheus_remote_write_url" {
+  type    = string
+  default = null
+}
+
+variable "prometheus_username" {
+  type    = string
+  default = "alloy"
+}
+
+variable "prometheus_password" {
+  type      = string
+  default   = null
+  sensitive = true
+}
+
+variable "pve_exporter_token_id" {
+  type    = string
+  default = null
+}
+
+variable "pve_exporter_token_secret" {
+  type      = string
+  default   = null
+  sensitive = true
+}
+
+variable "pve_exporter_image" {
+  type    = string
+  default = "prompve/prometheus-pve-exporter:latest"
+}
+
+variable "pve_exporter_platform" {
+  type    = string
+  default = "linux/amd64"
+}
+
+variable "pve_exporter_target" {
+  type    = string
+  default = null
 }

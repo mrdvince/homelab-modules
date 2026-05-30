@@ -1,0 +1,79 @@
+logging {
+  level  = "info"
+  format = "logfmt"
+}
+
+prometheus.exporter.unix "node" {
+  include_exporter_metrics = true
+  disable_collectors       = ["mdadm"]
+}
+
+prometheus.scrape "node" {
+  targets         = prometheus.exporter.unix.node.targets
+  scrape_interval = "30s"
+  forward_to      = [prometheus.relabel.node.receiver]
+}
+
+prometheus.relabel "node" {
+  forward_to = [prometheus.remote_write.prometheus.receiver]
+
+  rule {
+    target_label = "instance"
+    replacement  = "${instance}"
+  }
+
+  rule {
+    target_label = "platform"
+    replacement  = "${platform}"
+  }
+
+  rule {
+    target_label = "exporter"
+    replacement  = "node"
+  }
+}
+
+prometheus.scrape "pve" {
+  targets = [{
+    __address__ = "127.0.0.1:9221",
+  }]
+
+  metrics_path    = "/pve"
+  scrape_interval = "30s"
+  params = {
+    module = ["default"],
+    target = ["${pve_exporter_target}"],
+  }
+
+  forward_to = [prometheus.relabel.pve.receiver]
+}
+
+prometheus.relabel "pve" {
+  forward_to = [prometheus.remote_write.prometheus.receiver]
+
+  rule {
+    target_label = "instance"
+    replacement  = "${instance}"
+  }
+
+  rule {
+    target_label = "platform"
+    replacement  = "${platform}"
+  }
+
+  rule {
+    target_label = "exporter"
+    replacement  = "pve"
+  }
+}
+
+prometheus.remote_write "prometheus" {
+  endpoint {
+    url = "${prometheus_remote_write_url}"
+
+    basic_auth {
+      username = "${prometheus_username}"
+      password = sys.env("AUTHENTIK_ALLOY_APP_PASSWORD")
+    }
+  }
+}

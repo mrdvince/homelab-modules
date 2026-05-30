@@ -286,6 +286,23 @@ loki.process "file" {
     }
   }
 
+  stage.match {
+    selector = "{log_file=\"docker\"}"
+
+    stage.docker {}
+
+    stage.template {
+      source   = "level"
+      template = "info"
+    }
+
+    stage.labels {
+      values = {
+        level = "",
+      }
+    }
+  }
+
   stage.static_labels {
     values = {
       instance = "${instance}",
