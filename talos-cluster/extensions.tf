@@ -36,33 +36,52 @@ resource "null_resource" "upgrade_controlplane" {
 
   provisioner "local-exec" {
     command = <<-EOT
+      set -eu
+
       TARGET_VERSION="${var.talos_version}"
       for node in ${join(" ", var.controlplane_nodes)}; do
-        echo "upgrading $node to $TARGET_VERSION..."
-        talosctl upgrade --nodes "$node" --image ${data.talos_image_factory_urls.this.urls.installer} --preserve
+        CURRENT_VERSION=$(talosctl --endpoints "$node" version --nodes "$node" 2>/dev/null | awk '/^Server:/{server=1} server && /Tag:/{print $2; exit}' || true)
+        if [ "$CURRENT_VERSION" = "$TARGET_VERSION" ]; then
+          echo "$node is already running $TARGET_VERSION"
+        else
+          echo "upgrading $node from $CURRENT_VERSION to $TARGET_VERSION..."
+          talosctl --endpoints "$node" upgrade --nodes "$node" --image ${data.talos_image_factory_urls.this.urls.installer} --wait=false
+        fi
 
         echo "waiting for $node to reboot and come back..."
         sleep 30
 
         for i in $(seq 1 60); do
-          SERVER_VERSION=$(talosctl version --nodes "$node" 2>/dev/null | awk '/^Server:/{server=1} server && /Tag:/{print $2; exit}')
+          STAGE=""
+          SERVER_VERSION=$(talosctl --endpoints "$node" version --nodes "$node" 2>/dev/null | awk '/^Server:/{server=1} server && /Tag:/{print $2; exit}' || true)
           if [ "$SERVER_VERSION" = "$TARGET_VERSION" ]; then
-            STAGE=$(talosctl get machinestatus --nodes "$node" -o jsonpath='{.spec.stage}' 2>/dev/null || echo "")
+            STAGE=$(talosctl --endpoints "$node" get machinestatus --nodes "$node" -o jsonpath='{.spec.stage}' 2>/dev/null || echo "")
             if [ "$STAGE" = "running" ]; then
               echo "$node is running $TARGET_VERSION"
               break
             fi
+          fi
+          if [ "$i" = "60" ]; then
+            echo "timed out waiting for $node to run $TARGET_VERSION; last version='$SERVER_VERSION' stage='$STAGE'" >&2
+            exit 1
           fi
           echo "waiting for $node... (attempt $i/60)"
           sleep 10
         done
 
         echo "waiting for kubernetes node to be ready..."
-        NODE_NAME=$(kubectl get nodes -o json | jq -r '.items[] | select(.status.addresses[] | select(.type=="InternalIP" and .address=="'"$node"'")) | .metadata.name')
-        until kubectl get node "$NODE_NAME" -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}' 2>/dev/null | grep -q "True"; do
+        for i in $(seq 1 60); do
+          NODE_NAME=$(kubectl get nodes -o json | jq -r '.items[] | select(.status.addresses[] | select(.type=="InternalIP" and .address=="'"$node"'")) | .metadata.name' | head -n1)
+          if [ -n "$NODE_NAME" ] && kubectl get node "$NODE_NAME" -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}' 2>/dev/null | grep -q "True"; then
+            echo "$node ($NODE_NAME) upgrade complete"
+            break
+          fi
+          if [ "$i" = "60" ]; then
+            echo "timed out waiting for kubernetes node for $node to become Ready" >&2
+            exit 1
+          fi
           sleep 5
         done
-        echo "$node ($NODE_NAME) upgrade complete"
       done
     EOT
   }
@@ -80,33 +99,52 @@ resource "null_resource" "upgrade_workers" {
 
   provisioner "local-exec" {
     command = <<-EOT
+      set -eu
+
       TARGET_VERSION="${var.talos_version}"
       for node in ${join(" ", var.worker_nodes)}; do
-        echo "upgrading $node to $TARGET_VERSION..."
-        talosctl upgrade --nodes "$node" --image ${data.talos_image_factory_urls.this.urls.installer} --preserve
+        CURRENT_VERSION=$(talosctl --endpoints "$node" version --nodes "$node" 2>/dev/null | awk '/^Server:/{server=1} server && /Tag:/{print $2; exit}' || true)
+        if [ "$CURRENT_VERSION" = "$TARGET_VERSION" ]; then
+          echo "$node is already running $TARGET_VERSION"
+        else
+          echo "upgrading $node from $CURRENT_VERSION to $TARGET_VERSION..."
+          talosctl --endpoints "$node" upgrade --nodes "$node" --image ${data.talos_image_factory_urls.this.urls.installer} --wait=false
+        fi
 
         echo "waiting for $node to reboot and come back..."
         sleep 30
 
         for i in $(seq 1 60); do
-          SERVER_VERSION=$(talosctl version --nodes "$node" 2>/dev/null | awk '/^Server:/{server=1} server && /Tag:/{print $2; exit}')
+          STAGE=""
+          SERVER_VERSION=$(talosctl --endpoints "$node" version --nodes "$node" 2>/dev/null | awk '/^Server:/{server=1} server && /Tag:/{print $2; exit}' || true)
           if [ "$SERVER_VERSION" = "$TARGET_VERSION" ]; then
-            STAGE=$(talosctl get machinestatus --nodes "$node" -o jsonpath='{.spec.stage}' 2>/dev/null || echo "")
+            STAGE=$(talosctl --endpoints "$node" get machinestatus --nodes "$node" -o jsonpath='{.spec.stage}' 2>/dev/null || echo "")
             if [ "$STAGE" = "running" ]; then
               echo "$node is running $TARGET_VERSION"
               break
             fi
+          fi
+          if [ "$i" = "60" ]; then
+            echo "timed out waiting for $node to run $TARGET_VERSION; last version='$SERVER_VERSION' stage='$STAGE'" >&2
+            exit 1
           fi
           echo "waiting for $node... (attempt $i/60)"
           sleep 10
         done
 
         echo "waiting for kubernetes node to be ready..."
-        NODE_NAME=$(kubectl get nodes -o json | jq -r '.items[] | select(.status.addresses[] | select(.type=="InternalIP" and .address=="'"$node"'")) | .metadata.name')
-        until kubectl get node "$NODE_NAME" -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}' 2>/dev/null | grep -q "True"; do
+        for i in $(seq 1 60); do
+          NODE_NAME=$(kubectl get nodes -o json | jq -r '.items[] | select(.status.addresses[] | select(.type=="InternalIP" and .address=="'"$node"'")) | .metadata.name' | head -n1)
+          if [ -n "$NODE_NAME" ] && kubectl get node "$NODE_NAME" -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}' 2>/dev/null | grep -q "True"; then
+            echo "$node ($NODE_NAME) upgrade complete"
+            break
+          fi
+          if [ "$i" = "60" ]; then
+            echo "timed out waiting for kubernetes node for $node to become Ready" >&2
+            exit 1
+          fi
           sleep 5
         done
-        echo "$node ($NODE_NAME) upgrade complete"
       done
     EOT
   }

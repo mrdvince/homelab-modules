@@ -27,12 +27,12 @@ locals {
             name = "PodSecurity"
             configuration = {
               defaults = {
-                audit            = "privileged"
-                "audit-version"  = "latest"
-                enforce          = "privileged"
+                audit             = "privileged"
+                "audit-version"   = "latest"
+                enforce           = "privileged"
                 "enforce-version" = "latest"
-                warn             = "privileged"
-                "warn-version"   = "latest"
+                warn              = "privileged"
+                "warn-version"    = "latest"
               }
             }
           }
@@ -51,13 +51,24 @@ locals {
     }
   })
 
+  ethernet_config_patches = [
+    for ethernet_config in var.ethernet_configs : yamlencode({
+      apiVersion = "v1alpha1"
+      kind       = "EthernetConfig"
+      name       = ethernet_config.name
+      features   = ethernet_config.features
+    })
+  ]
+
   controlplane_config_patches = concat(
     [local.base_config_patch],
+    local.ethernet_config_patches,
     var.config_patches,
     var.controlplane_patches
   )
 
   worker_config_patches = concat(
+    local.ethernet_config_patches,
     var.config_patches,
     var.worker_patches
   )

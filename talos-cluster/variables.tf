@@ -37,6 +37,15 @@ variable "config_patches" {
   default     = []
 }
 
+variable "ethernet_configs" {
+  description = "Talos EthernetConfig documents applied to all nodes"
+  type = list(object({
+    name     = string
+    features = optional(map(bool), {})
+  }))
+  default = []
+}
+
 variable "controlplane_patches" {
   description = "Config patches applied only to control plane nodes"
   type        = list(string)
