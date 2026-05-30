@@ -6,21 +6,22 @@ resource "proxmox_virtual_environment_vm" "instance" {
   name            = each.key
   node_name       = var.node_name
   vm_id           = each.value.vmid
-  tags            = var.tags
+  tags            = distinct(concat(var.tags, var.include_vmname_tag ? [each.key] : [], lookup(var.instance_tags, each.key, [])))
   on_boot         = var.on_boot
   machine         = var.machine
   bios            = var.bios
   stop_on_destroy = var.stop_on_destroy
 
   cpu {
-    cores   = var.cores
-    sockets = var.sockets
-    type    = var.cpu_type
+    cores   = coalesce(each.value.resources.cores, var.cores)
+    flags   = var.cpu_flags
+    sockets = coalesce(each.value.resources.sockets, var.sockets)
+    type    = coalesce(each.value.resources.cpu_type, var.cpu_type)
   }
 
   memory {
-    dedicated = var.memory
-    floating  = var.balloon
+    dedicated = coalesce(each.value.resources.memory, var.memory)
+    floating  = coalesce(each.value.resources.balloon, var.balloon)
   }
 
   agent {
@@ -92,6 +93,7 @@ resource "proxmox_virtual_environment_vm" "instance" {
 
   lifecycle {
     ignore_changes = [
+      cdrom,
       initialization,
       network_device,
     ]

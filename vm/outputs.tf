@@ -5,6 +5,13 @@ output "vm_ids" {
   }
 }
 
+output "vm_mac_addresses" {
+  description = "Map of VM names to MAC addresses"
+  value = {
+    for instance in var.instances : instance.vmname => instance.macaddr
+  }
+}
+
 output "vm_ipv4_addresses" {
   description = "Map of VM names to primary IPv4 address"
   value = {

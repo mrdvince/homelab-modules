@@ -9,6 +9,13 @@ variable "instances" {
     vmname  = string
     vmid    = number
     macaddr = string
+    resources = optional(object({
+      cores    = optional(number)
+      sockets  = optional(number)
+      cpu_type = optional(string)
+      memory   = optional(number)
+      balloon  = optional(number)
+    }), {})
   }))
 }
 
@@ -16,6 +23,18 @@ variable "tags" {
   description = "Tags for the VM"
   type        = list(string)
   default     = []
+}
+
+variable "include_vmname_tag" {
+  description = "Add the VM name as a Proxmox tag"
+  type        = bool
+  default     = false
+}
+
+variable "instance_tags" {
+  description = "Additional tags per VM, keyed by VM name"
+  type        = map(list(string))
+  default     = {}
 }
 
 variable "on_boot" {
@@ -52,6 +71,12 @@ variable "cpu_type" {
   description = "CPU type"
   type        = string
   default     = "x86-64-v3"
+}
+
+variable "cpu_flags" {
+  description = "CPU flags"
+  type        = list(string)
+  default     = []
 }
 
 variable "memory" {
