@@ -3,6 +3,23 @@ variable "node_name" {
   type        = string
 }
 
+variable "proxmox_endpoint" {
+  description = "Proxmox API endpoint"
+  type        = string
+}
+
+variable "proxmox_api_token" {
+  description = "Proxmox API token in id=secret format"
+  type        = string
+  sensitive   = true
+}
+
+variable "proxmox_insecure" {
+  description = "Skip TLS verification for the Proxmox API"
+  type        = bool
+  default     = false
+}
+
 variable "instances" {
   description = "List of VM instances to create"
   type = list(object({

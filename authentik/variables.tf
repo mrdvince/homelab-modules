@@ -6,6 +6,17 @@ variable "sub_mode" {
   default = "hashed_user_id"
 }
 
+variable "authentik_url" {
+  description = "authentik API endpoint"
+  type        = string
+}
+
+variable "authentik_token" {
+  description = "authentik API token"
+  type        = string
+  sensitive   = true
+}
+
 variable "policy_expression" {
   type    = map(any)
   default = null

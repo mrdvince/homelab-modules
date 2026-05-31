@@ -4,6 +4,29 @@ variable "template_name" {
   default     = null
 }
 
+variable "pm_api_url" {
+  description = "Proxmox API endpoint"
+  type        = string
+}
+
+variable "pm_api_token_id" {
+  description = "Proxmox API token id"
+  type        = string
+  sensitive   = true
+}
+
+variable "pm_api_token_secret" {
+  description = "Proxmox API token secret"
+  type        = string
+  sensitive   = true
+}
+
+variable "pm_tls_insecure" {
+  description = "Skip TLS verification for the Proxmox API"
+  type        = bool
+  default     = false
+}
+
 variable "os_type" {
   description = "Type of the OS"
   type        = string

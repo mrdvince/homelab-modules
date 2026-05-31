@@ -2,11 +2,16 @@ terraform {
   required_providers {
     authentik = {
       source  = "goauthentik/authentik"
-      version = "2025.12.1"
+      version = "2026.2.0"
     }
     random = {
       source  = "hashicorp/random"
-      version = "3.8.1"
+      version = "3.9.0"
     }
   }
+}
+
+provider "authentik" {
+  url   = var.authentik_url
+  token = var.authentik_token
 }

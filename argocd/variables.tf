@@ -54,10 +54,10 @@ variable "values" {
 variable "repositories" {
   description = "Git repositories to configure in ArgoCD"
   type = map(object({
-    url         = string
-    ssh_key     = optional(string)
-    type        = optional(string, "git")
-    insecure    = optional(bool, false)
+    url      = string
+    ssh_key  = optional(string)
+    type     = optional(string, "git")
+    insecure = optional(bool, false)
   }))
   default = {}
 }

@@ -63,6 +63,10 @@ resource "authentik_application" "this" {
   slug              = each.key
   meta_icon         = var.app_meta_icon
   protocol_provider = authentik_provider_oauth2.this[each.key].id
+
+  lifecycle {
+    ignore_changes = [meta_icon]
+  }
 }
 
 resource "authentik_group" "this" {
@@ -87,6 +91,10 @@ resource "authentik_application" "proxy" {
   name              = try(each.value.name, each.key)
   slug              = each.key
   protocol_provider = authentik_provider_proxy.this[each.key].id
+
+  lifecycle {
+    ignore_changes = [meta_icon]
+  }
 }
 
 resource "authentik_policy_binding" "proxy-access" {
