@@ -33,6 +33,7 @@ prometheus.relabel "node" {
   }
 }
 
+%{ if create_pve_exporter ~}
 prometheus.scrape "pve" {
   targets = [{
     __address__ = "127.0.0.1:9221",
@@ -66,6 +67,7 @@ prometheus.relabel "pve" {
     replacement  = "pve"
   }
 }
+%{ endif ~}
 
 prometheus.remote_write "prometheus" {
   endpoint {

@@ -5,7 +5,6 @@ set -a
 . /tmp/olly.env
 set +a
 
-install -d -m 0750 -o root -g alloy /etc/alloy
 install -d -m 0755 /etc/systemd/system
 install -d -m 0755 /etc/apt/keyrings
 
@@ -25,6 +24,7 @@ apt-get update >/dev/null
 apt-get install -y alloy rsyslog >/dev/null
 systemctl enable --now rsyslog >/dev/null
 
+install -d -m 0750 -o root -g alloy /etc/alloy
 install -m 0644 -o root -g root /tmp/olly-logs.alloy /etc/alloy/logs.alloy
 
 umask 077

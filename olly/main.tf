@@ -20,6 +20,7 @@ locals {
   metrics_config = templatefile("${path.module}/templates/metrics.alloy.tftpl", {
     instance                    = var.instance
     platform                    = var.platform
+    create_pve_exporter         = var.create_pve_exporter
     prometheus_remote_write_url = var.prometheus_remote_write_url != null ? var.prometheus_remote_write_url : ""
     prometheus_username         = var.prometheus_username
     pve_exporter_target         = var.pve_exporter_target != null ? var.pve_exporter_target : var.host
@@ -41,6 +42,7 @@ locals {
 
   metrics_bootstrap_env = <<-EOF
     PROMETHEUS_PASSWORD='${local.shell_prometheus_password}'
+    PVE_EXPORTER_ENABLED='${var.create_pve_exporter ? "true" : "false"}'
     PVE_EXPORTER_USER='${local.shell_pve_exporter_user}'
     PVE_EXPORTER_TOKEN_NAME='${local.shell_pve_exporter_token_name}'
     PVE_EXPORTER_TOKEN_SECRET='${local.shell_pve_exporter_secret}'
@@ -156,6 +158,7 @@ resource "null_resource" "metrics" {
     prometheus_remote_write_url      = var.prometheus_remote_write_url != null ? var.prometheus_remote_write_url : ""
     prometheus_username              = var.prometheus_username
     prometheus_password_sha256       = nonsensitive(sha256(var.prometheus_password != null ? var.prometheus_password : ""))
+    create_pve_exporter              = tostring(var.create_pve_exporter)
     pve_exporter_token_id            = var.pve_exporter_token_id != null ? var.pve_exporter_token_id : ""
     pve_exporter_token_secret_sha256 = nonsensitive(sha256(var.pve_exporter_token_secret != null ? var.pve_exporter_token_secret : ""))
     pve_exporter_image               = var.pve_exporter_image

@@ -9,13 +9,7 @@ export DEBIAN_FRONTEND=noninteractive
 apt-get update >/dev/null
 apt-get install -y alloy ca-certificates >/dev/null
 
-if ! command -v docker >/dev/null 2>&1; then
-  echo "docker is required for pve-exporter but is not installed" >&2
-  exit 1
-fi
-
 install -d -m 0750 -o root -g alloy /etc/alloy
-install -d -m 0750 -o root -g root /etc/pve-exporter
 install -d -m 0755 /etc/systemd/system
 
 install -m 0644 -o root -g root /tmp/olly-metrics.alloy /etc/alloy/metrics.alloy
@@ -30,38 +24,48 @@ umask 077
 chown root:root /etc/alloy/metrics.env
 chmod 0600 /etc/alloy/metrics.env
 
-cat > /etc/pve-exporter/config.yml <<PVE_CONFIG
+if [[ "${PVE_EXPORTER_ENABLED}" == "true" ]]; then
+  if ! command -v docker >/dev/null 2>&1; then
+    echo "docker is required for pve-exporter but is not installed" >&2
+    exit 1
+  fi
+
+  install -d -m 0750 -o root -g root /etc/pve-exporter
+  cat > /etc/pve-exporter/config.yml <<PVE_CONFIG
 default:
   user: ${PVE_EXPORTER_USER}
   token_name: ${PVE_EXPORTER_TOKEN_NAME}
   token_value: ${PVE_EXPORTER_TOKEN_SECRET}
   verify_ssl: false
 PVE_CONFIG
-chown root:101 /etc/pve-exporter/config.yml
-chmod 0640 /etc/pve-exporter/config.yml
+  chown root:101 /etc/pve-exporter/config.yml
+  chmod 0640 /etc/pve-exporter/config.yml
 
-systemctl enable --now docker >/dev/null
-docker pull --platform "${PVE_EXPORTER_PLATFORM}" "${PVE_EXPORTER_IMAGE}" >/dev/null
-image_platform="$(docker image inspect "${PVE_EXPORTER_IMAGE}" --format '{{.Os}}/{{.Architecture}}')"
-if [ "${image_platform}" != "${PVE_EXPORTER_PLATFORM}" ]; then
-  echo "pve-exporter image ${PVE_EXPORTER_IMAGE} resolved to ${image_platform}, expected ${PVE_EXPORTER_PLATFORM}" >&2
-  exit 1
+  systemctl enable --now docker >/dev/null
+  docker pull --platform "${PVE_EXPORTER_PLATFORM}" "${PVE_EXPORTER_IMAGE}" >/dev/null
+  image_platform="$(docker image inspect "${PVE_EXPORTER_IMAGE}" --format '{{.Os}}/{{.Architecture}}')"
+  if [ "${image_platform}" != "${PVE_EXPORTER_PLATFORM}" ]; then
+    echo "pve-exporter image ${PVE_EXPORTER_IMAGE} resolved to ${image_platform}, expected ${PVE_EXPORTER_PLATFORM}" >&2
+    exit 1
+  fi
+  docker rm -f pve-exporter >/dev/null 2>&1 || true
+  docker run -d \
+    --platform "${PVE_EXPORTER_PLATFORM}" \
+    --name pve-exporter \
+    --restart unless-stopped \
+    --publish 127.0.0.1:9221:9221 \
+    --volume /etc/pve-exporter/config.yml:/etc/prometheus/pve.yml:ro \
+    "${PVE_EXPORTER_IMAGE}" >/dev/null
+else
+  docker rm -f pve-exporter >/dev/null 2>&1 || true
 fi
-docker rm -f pve-exporter >/dev/null 2>&1 || true
-docker run -d \
-  --platform "${PVE_EXPORTER_PLATFORM}" \
-  --name pve-exporter \
-  --restart unless-stopped \
-  --publish 127.0.0.1:9221:9221 \
-  --volume /etc/pve-exporter/config.yml:/etc/prometheus/pve.yml:ro \
-  "${PVE_EXPORTER_IMAGE}" >/dev/null
 
 cat > /etc/systemd/system/alloy-metrics.service <<'SERVICE'
 [Unit]
 Description=Grafana Alloy metrics collector
 Documentation=https://grafana.com/docs/alloy
-Wants=network-online.target docker.service
-After=network-online.target docker.service
+Wants=network-online.target
+After=network-online.target
 
 [Service]
 Restart=always

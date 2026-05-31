@@ -21,6 +21,11 @@ variable "create_metrics" {
   default = false
 }
 
+variable "create_pve_exporter" {
+  type    = bool
+  default = false
+}
+
 variable "loki_url" {
   type    = string
   default = null
