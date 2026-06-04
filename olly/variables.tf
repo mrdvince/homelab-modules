@@ -1,5 +1,12 @@
 variable "host" {
-  type = string
+  type    = string
+  default = null
+}
+
+variable "ssh_host_alias" {
+  description = "OpenSSH host alias to use for remote execution. Prefer this for YubiKey-backed ControlMaster sessions."
+  type        = string
+  default     = null
 }
 
 variable "ssh_user" {
@@ -8,7 +15,14 @@ variable "ssh_user" {
 }
 
 variable "ssh_private_key_path" {
-  type = string
+  type    = string
+  default = null
+}
+
+variable "ssh_options" {
+  description = "Additional OpenSSH arguments used for remote execution."
+  type        = list(string)
+  default     = ["-o", "BatchMode=yes"]
 }
 
 variable "create_logs" {

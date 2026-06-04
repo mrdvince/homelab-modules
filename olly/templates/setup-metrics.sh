@@ -49,12 +49,21 @@ PVE_CONFIG
     exit 1
   fi
   docker rm -f pve-exporter >/dev/null 2>&1 || true
+  docker_extra_args=()
+  if [[ "${PVE_EXPORTER_TARGET}" != "" && ! "${PVE_EXPORTER_TARGET}" =~ ^[0-9]+(\.[0-9]+){3}$ && ! "${PVE_EXPORTER_TARGET}" == *:* ]]; then
+    pve_exporter_target_ip="$(getent hosts "${PVE_EXPORTER_TARGET}" | awk '{ print $1; exit }')"
+    if [[ "${pve_exporter_target_ip}" != "" ]]; then
+      docker_extra_args+=(--add-host "${PVE_EXPORTER_TARGET}:${pve_exporter_target_ip}")
+    fi
+  fi
   docker run -d \
     --platform "${PVE_EXPORTER_PLATFORM}" \
     --name pve-exporter \
     --restart unless-stopped \
     --publish 127.0.0.1:9221:9221 \
+    --volume /etc/resolv.conf:/etc/resolv.conf:ro \
     --volume /etc/pve-exporter/config.yml:/etc/prometheus/pve.yml:ro \
+    "${docker_extra_args[@]}" \
     "${PVE_EXPORTER_IMAGE}" >/dev/null
 else
   docker rm -f pve-exporter >/dev/null 2>&1 || true
