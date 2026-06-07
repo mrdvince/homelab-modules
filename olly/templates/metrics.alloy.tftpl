@@ -103,6 +103,55 @@ prometheus.relabel "opnsense" {
 }
 %{ endif ~}
 
+%{ if create_snmp_exporter ~}
+local.file "snmp_config" {
+  filename  = "/etc/alloy/snmp.yml"
+  is_secret = true
+}
+
+prometheus.exporter.snmp "opnsense" {
+  config                = local.file.snmp_config.content
+  config_merge_strategy = "merge"
+
+  target "opnsense" {
+    address = "${snmp_address}"
+    module  = "system,if_mib,hrSystem,hrStorage,hrDevice,ucd_la_table,ucd_memory,ucd_system_stats"
+    auth    = "opnsense_v3"
+
+    labels = {
+      instance = "${snmp_instance}",
+      platform = "${snmp_platform}",
+      exporter = "snmp",
+    }
+  }
+}
+
+prometheus.scrape "snmp" {
+  targets         = prometheus.exporter.snmp.opnsense.targets
+  scrape_interval = "30s"
+  forward_to      = [prometheus.relabel.snmp.receiver]
+}
+
+prometheus.relabel "snmp" {
+  forward_to = [prometheus.remote_write.prometheus.receiver]
+
+  rule {
+    target_label = "instance"
+    replacement  = "${snmp_instance}"
+  }
+
+  rule {
+    target_label = "platform"
+    replacement  = "${snmp_platform}"
+  }
+
+  rule {
+    target_label = "exporter"
+    replacement  = "snmp"
+  }
+}
+%{ endif ~}
+
 prometheus.remote_write "prometheus" {
   endpoint {
     url = "${prometheus_remote_write_url}"

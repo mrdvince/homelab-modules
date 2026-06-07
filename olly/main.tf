@@ -24,12 +24,16 @@ locals {
     platform                      = var.platform
     create_pve_exporter           = var.create_pve_exporter
     create_opnsense_exporter      = var.create_opnsense_exporter
+    create_snmp_exporter          = var.create_snmp_exporter
     prometheus_remote_write_url   = var.prometheus_remote_write_url != null ? var.prometheus_remote_write_url : ""
     prometheus_username           = var.prometheus_username
     pve_exporter_target           = local.pve_exporter_target
     opnsense_exporter_listen_port = var.opnsense_exporter_listen_port
     opnsense_exporter_instance    = var.opnsense_instance
     opnsense_exporter_platform    = var.opnsense_platform
+    snmp_address                  = var.snmp_address != null ? var.snmp_address : ""
+    snmp_instance                 = var.snmp_instance
+    snmp_platform                 = var.snmp_platform
   })
 
   metrics_setup_script = file("${path.module}/templates/metrics.sh")
@@ -73,6 +77,7 @@ locals {
     OPNSENSE_API_SECRET='${local.shell_opnsense_api_secret}'
     OPNSENSE_INSTANCE='${local.shell_opnsense_instance}'
     OPNSENSE_INSECURE='${var.opnsense_insecure ? "true" : "false"}'
+    SNMP_ENABLED='${var.create_snmp_exporter ? "true" : "false"}'
   EOF
 
   ssh_target = var.ssh_host_alias != null ? var.ssh_host_alias : var.host != null ? "${var.ssh_user}@${var.host}" : ""
@@ -219,6 +224,13 @@ resource "null_resource" "metrics" {
     opnsense_instance                = var.opnsense_instance
     opnsense_platform                = var.opnsense_platform
     opnsense_insecure                = tostring(var.opnsense_insecure)
+    create_snmp_exporter             = tostring(var.create_snmp_exporter)
+    snmp_address                     = var.snmp_address != null ? var.snmp_address : ""
+    snmp_username                    = var.snmp_username
+    snmp_password_sha256             = nonsensitive(sha256(var.snmp_password != null ? var.snmp_password : ""))
+    snmp_enc_key_sha256              = nonsensitive(sha256(var.snmp_enc_key != null ? var.snmp_enc_key : ""))
+    snmp_instance                    = var.snmp_instance
+    snmp_platform                    = var.snmp_platform
     metrics_config_sha256            = sha256(local.metrics_config)
     setup_script_sha256              = sha256(local.metrics_setup_script)
   }
@@ -237,6 +249,11 @@ resource "null_resource" "metrics" {
     precondition {
       condition     = !var.create_opnsense_exporter || var.opnsense_address != null
       error_message = "opnsense_address must be set when create_opnsense_exporter is true."
+    }
+
+    precondition {
+      condition     = !var.create_snmp_exporter || var.snmp_address != null
+      error_message = "snmp_address must be set when create_snmp_exporter is true."
     }
   }
 
@@ -265,6 +282,9 @@ resource "null_resource" "metrics" {
       OLLY_OPNSENSE_API_SECRET   = var.opnsense_api_secret != null ? var.opnsense_api_secret : ""
       OLLY_OPNSENSE_INSTANCE     = var.opnsense_instance
       OLLY_OPNSENSE_INSECURE     = var.opnsense_insecure ? "true" : "false"
+      OLLY_SNMP_USERNAME         = var.snmp_username
+      OLLY_SNMP_PASSWORD         = var.snmp_password != null ? var.snmp_password : ""
+      OLLY_SNMP_ENC_KEY          = var.snmp_enc_key != null ? var.snmp_enc_key : ""
     }
     command = <<-EOT
       set -euo pipefail
@@ -297,6 +317,10 @@ resource "null_resource" "metrics" {
         printf 'OPNSENSE_API_SECRET=%q\n' "$OLLY_OPNSENSE_API_SECRET"
         printf 'OPNSENSE_INSTANCE=%q\n' "$OLLY_OPNSENSE_INSTANCE"
         printf 'OPNSENSE_INSECURE=%q\n' "$OLLY_OPNSENSE_INSECURE"
+        printf 'SNMP_ENABLED=%q\n' "${var.create_snmp_exporter ? "true" : "false"}"
+        printf 'SNMP_USERNAME=%q\n' "$OLLY_SNMP_USERNAME"
+        printf 'SNMP_PASSWORD=%q\n' "$OLLY_SNMP_PASSWORD"
+        printf 'SNMP_ENC_KEY=%q\n' "$OLLY_SNMP_ENC_KEY"
       } | "$${ssh_cmd[@]}" 'umask 077; cat > /tmp/olly-metrics.env'
       "$${ssh_cmd[@]}" 'chmod 0700 /tmp/olly-metrics.sh && chmod 0600 /tmp/olly-metrics.env && /tmp/olly-metrics.sh'
     EOT

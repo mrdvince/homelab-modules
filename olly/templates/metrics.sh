@@ -15,6 +15,24 @@ printf 'AUTHENTIK_ALLOY_APP_PASSWORD=%s\n' "${PROMETHEUS_PASSWORD}" > /etc/alloy
 chown root:root /etc/alloy/metrics.env
 chmod 0600 /etc/alloy/metrics.env
 
+if [[ "${SNMP_ENABLED:-false}" == "true" ]]; then
+  cat > /etc/alloy/snmp.yml <<SNMP_CONFIG
+auths:
+  opnsense_v3:
+    version: 3
+    security_level: authPriv
+    username: ${SNMP_USERNAME}
+    password: ${SNMP_PASSWORD}
+    auth_protocol: SHA
+    priv_protocol: AES
+    priv_password: ${SNMP_ENC_KEY}
+SNMP_CONFIG
+  chown root:root /etc/alloy/snmp.yml
+  chmod 0600 /etc/alloy/snmp.yml
+else
+  rm -f /etc/alloy/snmp.yml
+fi
+
 docker pull "${ALLOY_IMAGE}" >/dev/null
 
 if [[ "${PVE_EXPORTER_ENABLED}" == "true" ]]; then
@@ -113,6 +131,7 @@ docker_args=(
 )
 
 [[ -d /run/udev/data ]] && docker_args+=(--volume /run/udev/data:/host/run/udev/data:ro)
+[[ -f /etc/alloy/snmp.yml ]] && docker_args+=(--volume /etc/alloy/snmp.yml:/etc/alloy/snmp.yml:ro)
 
 docker run "${docker_args[@]}" \
   "${ALLOY_IMAGE}" \

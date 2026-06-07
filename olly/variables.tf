@@ -45,6 +45,11 @@ variable "create_opnsense_exporter" {
   default = false
 }
 
+variable "create_snmp_exporter" {
+  type    = bool
+  default = false
+}
+
 variable "alloy_image" {
   type    = string
   default = "registry.home.mrdvince.me/olly/alloy:1.16.2"
@@ -224,4 +229,36 @@ variable "opnsense_platform" {
 variable "opnsense_insecure" {
   type    = bool
   default = true
+}
+
+variable "snmp_address" {
+  type    = string
+  default = null
+}
+
+variable "snmp_username" {
+  type    = string
+  default = "alloy"
+}
+
+variable "snmp_password" {
+  type      = string
+  default   = null
+  sensitive = true
+}
+
+variable "snmp_enc_key" {
+  type      = string
+  default   = null
+  sensitive = true
+}
+
+variable "snmp_instance" {
+  type    = string
+  default = "opnsense"
+}
+
+variable "snmp_platform" {
+  type    = string
+  default = "opnsense"
 }
