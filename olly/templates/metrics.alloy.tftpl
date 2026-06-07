@@ -6,6 +6,10 @@ logging {
 prometheus.exporter.unix "node" {
   include_exporter_metrics = true
   disable_collectors       = ["mdadm"]
+  procfs_path              = "/host/proc"
+  rootfs_path              = "/host/rootfs"
+  sysfs_path               = "/host/sys"
+  udev_data_path           = "/host/run/udev/data"
 }
 
 prometheus.scrape "node" {
@@ -65,6 +69,36 @@ prometheus.relabel "pve" {
   rule {
     target_label = "exporter"
     replacement  = "pve"
+  }
+}
+%{ endif ~}
+
+%{ if create_opnsense_exporter ~}
+prometheus.scrape "opnsense" {
+  targets = [{
+    __address__ = "127.0.0.1:${opnsense_exporter_listen_port}",
+  }]
+
+  scrape_interval = "30s"
+  forward_to      = [prometheus.relabel.opnsense.receiver]
+}
+
+prometheus.relabel "opnsense" {
+  forward_to = [prometheus.remote_write.prometheus.receiver]
+
+  rule {
+    target_label = "instance"
+    replacement  = "${opnsense_exporter_instance}"
+  }
+
+  rule {
+    target_label = "platform"
+    replacement  = "${opnsense_exporter_platform}"
+  }
+
+  rule {
+    target_label = "exporter"
+    replacement  = "opnsense"
   }
 }
 %{ endif ~}

@@ -40,6 +40,16 @@ variable "create_pve_exporter" {
   default = false
 }
 
+variable "create_opnsense_exporter" {
+  type    = bool
+  default = false
+}
+
+variable "alloy_image" {
+  type    = string
+  default = "registry.home.mrdvince.me/olly/alloy:1.16.2"
+}
+
 variable "loki_url" {
   type    = string
   default = null
@@ -167,4 +177,51 @@ variable "pve_exporter_platform" {
 variable "pve_exporter_target" {
   type    = string
   default = null
+}
+
+variable "opnsense_exporter_image" {
+  type    = string
+  default = "ghcr.io/athennamind/opnsense-exporter:0.0.16"
+}
+
+variable "opnsense_exporter_platform" {
+  type    = string
+  default = "linux/amd64"
+}
+
+variable "opnsense_exporter_listen_port" {
+  type    = number
+  default = 9222
+}
+
+variable "opnsense_address" {
+  type    = string
+  default = null
+}
+
+variable "opnsense_api_key" {
+  type      = string
+  default   = null
+  sensitive = true
+}
+
+variable "opnsense_api_secret" {
+  type      = string
+  default   = null
+  sensitive = true
+}
+
+variable "opnsense_instance" {
+  type    = string
+  default = "opnsense"
+}
+
+variable "opnsense_platform" {
+  type    = string
+  default = "opnsense"
+}
+
+variable "opnsense_insecure" {
+  type    = bool
+  default = true
 }
