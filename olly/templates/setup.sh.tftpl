@@ -1,0 +1,56 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+install -d -m 0750 -o root -g root '${remote_dir}'
+
+%{ for _, container in containers ~}
+%{ if container.pull ~}
+docker pull%{ if container.platform != null } --platform '${container.platform}'%{ endif } '${container.image}' >/dev/null
+%{ endif ~}
+docker rm -f '${container.container_name}' >/dev/null 2>&1 || true
+
+args=(
+  --detach
+  --name '${container.container_name}'
+  --restart '${container.restart}'
+%{ if container.read_only ~}
+  --read-only
+%{ endif ~}
+%{ if container.network_mode != null ~}
+  --network '${container.network_mode}'
+%{ endif ~}
+%{ if container.pid_mode != null ~}
+  --pid '${container.pid_mode}'
+%{ endif ~}
+%{ if container.platform != null ~}
+  --platform '${container.platform}'
+%{ endif ~}
+%{ for port in container.ports ~}
+  --publish '${port}'
+%{ endfor ~}
+%{ for volume in container.volumes ~}
+  --volume '${volume}'
+%{ endfor ~}
+%{ for env_file in container.env_files ~}
+  --env-file '${remote_dir}/${env_file}'
+%{ endfor ~}
+%{ for tmpfs in container.tmpfs ~}
+  --tmpfs '${tmpfs}'
+%{ endfor ~}
+%{ for extra_host in container.extra_hosts ~}
+  --add-host '${extra_host}'
+%{ endfor ~}
+)
+%{ for host in container.resolve_hosts ~}
+resolved_ip="$(getent hosts '${host}' | awk '{ print $1; exit }')"
+if [[ "$resolved_ip" != "" ]]; then
+  args+=(--add-host '${host}':"$resolved_ip")
+fi
+%{ endfor ~}
+%{ for arg in container.extra_args ~}
+args+=('${arg}')
+%{ endfor ~}
+
+docker run "$${args[@]}" '${container.image}'%{ for arg in container.command } '${arg}'%{ endfor } >/dev/null
+
+%{ endfor ~}

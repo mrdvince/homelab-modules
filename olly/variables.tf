@@ -1,3 +1,8 @@
+variable "name" {
+  description = "logical olly unit name; also used as the default remote directory name."
+  type        = string
+}
+
 variable "host" {
   type    = string
   default = null
@@ -14,70 +19,16 @@ variable "ssh_user" {
   default = "root"
 }
 
-variable "ssh_private_key_path" {
-  type    = string
-  default = null
-}
-
 variable "ssh_options" {
   description = "Additional OpenSSH arguments used for remote execution."
   type        = list(string)
   default     = ["-o", "BatchMode=yes"]
 }
 
-variable "create_logs" {
-  type    = bool
-  default = false
-}
-
-variable "create_metrics" {
-  type    = bool
-  default = false
-}
-
-variable "create_pve_exporter" {
-  type    = bool
-  default = false
-}
-
-variable "create_opnsense_exporter" {
-  type    = bool
-  default = false
-}
-
-variable "create_snmp_exporter" {
-  type    = bool
-  default = false
-}
-
-variable "alloy_image" {
-  type    = string
-  default = "registry.home.mrdvince.me/olly/alloy:1.16.2"
-}
-
-variable "loki_url" {
-  type    = string
-  default = null
-}
-
-variable "loki_username" {
-  type    = string
-  default = "alloy"
-}
-
-variable "loki_password" {
-  type      = string
-  default   = null
-  sensitive = true
-}
-
-variable "instance" {
-  type = string
-}
-
-variable "platform" {
-  type    = string
-  default = "proxmox"
+variable "remote_dir" {
+  description = "directory on the remote host where unit-owned files are written."
+  type        = string
+  default     = null
 }
 
 variable "render_local_files" {
@@ -90,175 +41,48 @@ variable "render_local_dir" {
   default = "rendered"
 }
 
-variable "file_logs" {
-  type = list(object({
-    path     = string
-    job      = optional(string, "proxmox-file")
-    log_file = string
+variable "files" {
+  description = "non-secret files to upload relative to remote_dir and optionally render locally."
+  type = map(object({
+    content = string
+    mode    = optional(string, "0644")
+    owner   = optional(string, "root")
+    group   = optional(string, "root")
   }))
-
-  default = [
-    {
-      path     = "/var/log/pve/tasks/index*"
-      log_file = "pve-task-index"
-    },
-    {
-      path     = "/var/log/pve/tasks/active"
-      log_file = "pve-task-active"
-    },
-    {
-      path     = "/var/log/pve-firewall.log"
-      log_file = "pve-firewall"
-    },
-    {
-      path     = "/var/log/pveproxy/access.log"
-      log_file = "pveproxy-access"
-    },
-    {
-      path     = "/var/log/apt/history.log"
-      log_file = "apt-history"
-    },
-    {
-      path     = "/var/log/dpkg.log"
-      log_file = "dpkg"
-    },
-    {
-      path     = "/var/log/auth.log"
-      log_file = "auth"
-    },
-    {
-      path     = "/var/log/syslog"
-      log_file = "syslog"
-    },
-    {
-      path     = "/var/log/kern.log"
-      log_file = "kernel"
-    },
-    {
-      path     = "/var/lib/docker/containers/*/*.log"
-      log_file = "docker"
-      job      = "docker-file"
-    },
-  ]
+  default = {}
 }
 
-variable "prometheus_remote_write_url" {
-  type    = string
-  default = null
-}
-
-variable "prometheus_username" {
-  type    = string
-  default = "alloy"
-}
-
-variable "prometheus_password" {
-  type      = string
-  default   = null
+variable "secret_files" {
+  description = "secret files to upload relative to remote_dir. these are not rendered locally."
+  type = map(object({
+    content = string
+    mode    = optional(string, "0600")
+    owner   = optional(string, "root")
+    group   = optional(string, "root")
+  }))
+  default   = {}
   sensitive = true
 }
 
-variable "pve_exporter_token_id" {
-  type    = string
-  default = null
-}
-
-variable "pve_exporter_token_secret" {
-  type      = string
-  default   = null
-  sensitive = true
-}
-
-variable "pve_exporter_image" {
-  type    = string
-  default = "prompve/prometheus-pve-exporter:latest"
-}
-
-variable "pve_exporter_platform" {
-  type    = string
-  default = "linux/amd64"
-}
-
-variable "pve_exporter_target" {
-  type    = string
-  default = null
-}
-
-variable "opnsense_exporter_image" {
-  type    = string
-  default = "ghcr.io/athennamind/opnsense-exporter:0.0.16"
-}
-
-variable "opnsense_exporter_platform" {
-  type    = string
-  default = "linux/amd64"
-}
-
-variable "opnsense_exporter_listen_port" {
-  type    = number
-  default = 9222
-}
-
-variable "opnsense_address" {
-  type    = string
-  default = null
-}
-
-variable "opnsense_api_key" {
-  type      = string
-  default   = null
-  sensitive = true
-}
-
-variable "opnsense_api_secret" {
-  type      = string
-  default   = null
-  sensitive = true
-}
-
-variable "opnsense_instance" {
-  type    = string
-  default = "opnsense"
-}
-
-variable "opnsense_platform" {
-  type    = string
-  default = "opnsense"
-}
-
-variable "opnsense_insecure" {
-  type    = bool
-  default = true
-}
-
-variable "snmp_address" {
-  type    = string
-  default = null
-}
-
-variable "snmp_username" {
-  type    = string
-  default = "alloy"
-}
-
-variable "snmp_password" {
-  type      = string
-  default   = null
-  sensitive = true
-}
-
-variable "snmp_enc_key" {
-  type      = string
-  default   = null
-  sensitive = true
-}
-
-variable "snmp_instance" {
-  type    = string
-  default = "opnsense"
-}
-
-variable "snmp_platform" {
-  type    = string
-  default = "opnsense"
+variable "containers" {
+  description = "containers managed by this olly unit."
+  type = map(object({
+    image          = string
+    container_name = optional(string)
+    command        = optional(list(string), [])
+    platform       = optional(string)
+    pull           = optional(bool, true)
+    restart        = optional(string, "unless-stopped")
+    read_only      = optional(bool, true)
+    network_mode   = optional(string)
+    pid_mode       = optional(string)
+    ports          = optional(list(string), [])
+    volumes        = optional(list(string), [])
+    env_files      = optional(list(string), [])
+    tmpfs          = optional(list(string), [])
+    extra_args     = optional(list(string), [])
+    extra_hosts    = optional(list(string), [])
+    resolve_hosts  = optional(list(string), [])
+  }))
+  default = {}
 }

@@ -1,0 +1,29 @@
+set -euo pipefail
+
+ssh_options=()
+while IFS= read -r option; do
+  [ -n "$option" ] && ssh_options+=("$option")
+done <<< "$OLLY_SSH_OPTIONS"
+
+remote_dir='${remote_dir}'
+ssh "$${ssh_options[@]}" "$OLLY_SSH_TARGET" "install -d -m 0750 -o root -g root '$remote_dir'"
+
+upload_file() {
+  local env_name="$1"
+  local filename="$2"
+  local tmp_name="$3"
+  local mode="$4"
+  local owner="$5"
+  local group="$6"
+
+  printf '%s' "$${!env_name}" | ssh "$${ssh_options[@]}" "$OLLY_SSH_TARGET" \
+    "umask 077; base64 -d > '$remote_dir/$tmp_name'; install -m '$mode' -o '$owner' -g '$group' '$remote_dir/$tmp_name' '$remote_dir/$filename'; rm -f '$remote_dir/$tmp_name'"
+}
+
+%{ for file in upload_files ~}
+upload_file '${file.env_name}' '${file.filename}' '.${file.basename}.tmp' '${file.mode}' '${file.owner}' '${file.group}'
+%{ endfor ~}
+
+printf '%s' "$OLLY_SETUP_B64" | ssh "$${ssh_options[@]}" "$OLLY_SSH_TARGET" \
+  "base64 -d > '$remote_dir/setup.sh'; chmod 0700 '$remote_dir/setup.sh'; '$remote_dir/setup.sh'"
+
