@@ -62,6 +62,7 @@ resource "authentik_application" "this" {
   name              = try(each.value.name, each.key)
   slug              = each.key
   meta_icon         = var.app_meta_icon
+  meta_launch_url   = try(each.value.meta_launch_url, null)
   protocol_provider = authentik_provider_oauth2.this[each.key].id
 
   lifecycle {
