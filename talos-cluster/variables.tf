@@ -45,6 +45,23 @@ variable "talos_version" {
   default     = null
 }
 
+variable "kubernetes_version" {
+  description = "Target Kubernetes patch version. Kubernetes is upgraded after Talos and before the generated machine configuration is reapplied."
+  type        = string
+  default     = null
+
+  validation {
+    condition     = var.kubernetes_version == null || can(regex("^v?[0-9]+\\.[0-9]+\\.[0-9]+$", var.kubernetes_version))
+    error_message = "kubernetes_version must be an exact patch version such as 1.36.2."
+  }
+}
+
+variable "external_kubelet_upgrade_commands" {
+  description = "Commands for non-Talos nodes, keyed by Kubernetes node name. KUBERNETES_VERSION and KUBERNETES_MINOR are set for each upgrade step."
+  type        = map(string)
+  default     = {}
+}
+
 variable "config_patches" {
   description = "Common config patches applied to all nodes"
   type        = list(string)
@@ -161,11 +178,18 @@ variable "auto_upgrade" {
 }
 
 variable "config_apply_mode" {
-  description = "Mode for applying config changes: auto, reboot, staged, no_reboot"
+  description = "Talos machine configuration apply mode"
   type        = string
-  default     = "auto"
+  default     = "staged_if_needing_reboot"
+
   validation {
-    condition     = contains(["auto", "reboot", "staged", "no_reboot"], var.config_apply_mode)
-    error_message = "config_apply_mode must be one of: auto, reboot, staged, no_reboot"
+    condition = contains([
+      "auto",
+      "reboot",
+      "no_reboot",
+      "staged",
+      "staged_if_needing_reboot",
+    ], var.config_apply_mode)
+    error_message = "config_apply_mode must be a mode supported by the Talos provider."
   }
 }

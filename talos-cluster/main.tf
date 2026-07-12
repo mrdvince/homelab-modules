@@ -88,20 +88,22 @@ locals {
 }
 
 data "talos_machine_configuration" "controlplane" {
-  cluster_name     = var.cluster_name
-  machine_type     = "controlplane"
-  cluster_endpoint = var.cluster_endpoint
-  machine_secrets  = talos_machine_secrets.this.machine_secrets
-  talos_version    = var.talos_version
+  cluster_name       = var.cluster_name
+  machine_type       = "controlplane"
+  cluster_endpoint   = var.cluster_endpoint
+  machine_secrets    = talos_machine_secrets.this.machine_secrets
+  talos_version      = var.talos_version
+  kubernetes_version = var.kubernetes_version
 }
 
 data "talos_machine_configuration" "worker" {
-  count            = length(local.worker_node_endpoints_by_name) > 0 ? 1 : 0
-  cluster_name     = var.cluster_name
-  machine_type     = "worker"
-  cluster_endpoint = var.cluster_endpoint
-  machine_secrets  = talos_machine_secrets.this.machine_secrets
-  talos_version    = var.talos_version
+  count              = length(local.worker_node_endpoints_by_name) > 0 ? 1 : 0
+  cluster_name       = var.cluster_name
+  machine_type       = "worker"
+  cluster_endpoint   = var.cluster_endpoint
+  machine_secrets    = talos_machine_secrets.this.machine_secrets
+  talos_version      = var.talos_version
+  kubernetes_version = var.kubernetes_version
 }
 
 locals {
@@ -119,6 +121,8 @@ data "talos_client_configuration" "this" {
 }
 
 resource "talos_machine_configuration_apply" "controlplane" {
+  depends_on = [null_resource.upgrade_kubernetes]
+
   for_each                    = toset(var.controlplane_nodes)
   client_configuration        = talos_machine_secrets.this.client_configuration
   machine_configuration_input = data.talos_machine_configuration.controlplane.machine_configuration
@@ -128,6 +132,8 @@ resource "talos_machine_configuration_apply" "controlplane" {
 }
 
 resource "talos_machine_configuration_apply" "worker" {
+  depends_on = [null_resource.upgrade_kubernetes]
+
   for_each                    = local.worker_node_endpoints_by_name
   client_configuration        = talos_machine_secrets.this.client_configuration
   machine_configuration_input = data.talos_machine_configuration.worker[0].machine_configuration
@@ -136,11 +142,10 @@ resource "talos_machine_configuration_apply" "worker" {
     local.worker_config_patches,
     [
       yamlencode({
-        machine = {
-          network = {
-            hostname = each.key
-          }
-        }
+        apiVersion = "v1alpha1"
+        kind       = "HostnameConfig"
+        hostname   = each.key
+        auto       = "off"
       })
     ],
     length(lookup(var.worker_node_initial_taints, each.key, [])) > 0 ? [
