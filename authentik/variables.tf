@@ -2,6 +2,10 @@ variable "refresh_token_validity" {
   default = "days=1"
 }
 
+variable "refresh_token_threshold" {
+  default = "seconds=0"
+}
+
 variable "sub_mode" {
   default = "hashed_user_id"
 }

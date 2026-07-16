@@ -37,14 +37,15 @@ data "authentik_certificate_key_pair" "default" {
 }
 
 resource "authentik_provider_oauth2" "this" {
-  for_each               = var.authentik_application
-  name                   = each.key
-  client_id              = random_string.client_id[each.key].id
-  client_secret          = random_password.client_secret[each.key].result
-  authorization_flow     = data.authentik_flow.default-authorization-flow.id
-  invalidation_flow      = data.authentik_flow.default-invalidation-flow.id
-  refresh_token_validity = var.refresh_token_validity
-  allowed_redirect_uris  = each.value.allowed_redirect_uris
+  for_each                = var.authentik_application
+  name                    = each.key
+  client_id               = random_string.client_id[each.key].id
+  client_secret           = random_password.client_secret[each.key].result
+  authorization_flow      = data.authentik_flow.default-authorization-flow.id
+  invalidation_flow       = data.authentik_flow.default-invalidation-flow.id
+  refresh_token_validity  = try(each.value.refresh_token_validity, var.refresh_token_validity)
+  refresh_token_threshold = try(each.value.refresh_token_threshold, var.refresh_token_threshold)
+  allowed_redirect_uris   = each.value.allowed_redirect_uris
   property_mappings = concat(
     data.authentik_property_mapping_provider_scope.oauth2.ids,
     try(each.value.offline_access, false) ? data.authentik_property_mapping_provider_scope.offline_access.ids : [],
