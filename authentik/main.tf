@@ -32,6 +32,17 @@ data "authentik_property_mapping_provider_scope" "offline_access" {
   ]
 }
 
+locals {
+  extra_property_mapping_names = toset(flatten([
+    for application in values(var.authentik_application) : try(application.extra_property_mapping_names, [])
+  ]))
+}
+
+data "authentik_property_mapping_provider_scope" "extra" {
+  for_each = local.extra_property_mapping_names
+  name     = each.key
+}
+
 data "authentik_certificate_key_pair" "default" {
   name = var.signing_key_name
 }
@@ -49,6 +60,10 @@ resource "authentik_provider_oauth2" "this" {
   property_mappings = concat(
     data.authentik_property_mapping_provider_scope.oauth2.ids,
     try(each.value.offline_access, false) ? data.authentik_property_mapping_provider_scope.offline_access.ids : [],
+    [
+      for mapping_name in try(each.value.extra_property_mapping_names, []) :
+      data.authentik_property_mapping_provider_scope.extra[mapping_name].id
+    ],
   )
   signing_key = data.authentik_certificate_key_pair.default.id
   sub_mode    = var.sub_mode
@@ -68,16 +83,13 @@ resource "authentik_policy_binding" "app-access" {
 }
 
 resource "authentik_application" "this" {
-  for_each          = var.authentik_application
-  name              = try(each.value.name, each.key)
-  slug              = each.key
-  meta_icon         = var.app_meta_icon
-  meta_launch_url   = try(each.value.meta_launch_url, null)
-  protocol_provider = authentik_provider_oauth2.this[each.key].id
-
-  lifecycle {
-    ignore_changes = [meta_icon]
-  }
+  for_each           = var.authentik_application
+  name               = try(each.value.name, each.key)
+  slug               = each.key
+  meta_icon          = try(each.value.meta_icon, null)
+  meta_launch_url    = try(each.value.meta_launch_url, null)
+  policy_engine_mode = try(each.value.policy_engine_mode, null)
+  protocol_provider  = authentik_provider_oauth2.this[each.key].id
 }
 
 resource "authentik_group" "this" {
@@ -101,11 +113,8 @@ resource "authentik_application" "proxy" {
   for_each          = var.proxy_application
   name              = try(each.value.name, each.key)
   slug              = each.key
+  meta_icon         = try(each.value.meta_icon, null)
   protocol_provider = authentik_provider_proxy.this[each.key].id
-
-  lifecycle {
-    ignore_changes = [meta_icon]
-  }
 }
 
 resource "authentik_policy_binding" "proxy-access" {

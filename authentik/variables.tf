@@ -30,10 +30,6 @@ variable "authentik_application" {
   type = map(any)
 }
 
-variable "app_meta_icon" {
-  default = null
-}
-
 variable "groups" {
   type    = map(any)
   default = {}
@@ -48,6 +44,7 @@ variable "proxy_application" {
   description = "Map of proxy applications for forward auth"
   type = map(object({
     name            = optional(string)
+    meta_icon       = optional(string)
     external_host   = string
     mode            = optional(string, "forward_single")
     cookie_domain   = optional(string)
