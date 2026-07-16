@@ -26,6 +26,12 @@ data "authentik_property_mapping_provider_scope" "oauth2" {
   ]
 }
 
+data "authentik_property_mapping_provider_scope" "offline_access" {
+  managed_list = [
+    "goauthentik.io/providers/oauth2/scope-offline_access",
+  ]
+}
+
 data "authentik_certificate_key_pair" "default" {
   name = var.signing_key_name
 }
@@ -39,9 +45,12 @@ resource "authentik_provider_oauth2" "this" {
   invalidation_flow      = data.authentik_flow.default-invalidation-flow.id
   refresh_token_validity = var.refresh_token_validity
   allowed_redirect_uris  = each.value.allowed_redirect_uris
-  property_mappings      = data.authentik_property_mapping_provider_scope.oauth2.ids
-  signing_key            = data.authentik_certificate_key_pair.default.id
-  sub_mode               = var.sub_mode
+  property_mappings = concat(
+    data.authentik_property_mapping_provider_scope.oauth2.ids,
+    try(each.value.offline_access, false) ? data.authentik_property_mapping_provider_scope.offline_access.ids : [],
+  )
+  signing_key = data.authentik_certificate_key_pair.default.id
+  sub_mode    = var.sub_mode
 }
 
 resource "authentik_policy_expression" "policy" {
