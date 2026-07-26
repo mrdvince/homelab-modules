@@ -23,9 +23,11 @@ variable "proxmox_insecure" {
 variable "instances" {
   description = "List of VM instances to create"
   type = list(object({
-    vmname  = string
-    vmid    = number
-    macaddr = string
+    vmname       = string
+    vmid         = number
+    macaddr      = string
+    disk_path    = optional(string)
+    ipv4_address = optional(string)
     resources = optional(object({
       cores    = optional(number)
       sockets  = optional(number)
@@ -34,6 +36,14 @@ variable "instances" {
       balloon  = optional(number)
     }), {})
   }))
+
+  validation {
+    condition = alltrue([
+      for instance in var.instances :
+      instance.disk_path == null || startswith(instance.disk_path, "/")
+    ])
+    error_message = "Instance disk_path values must be absolute host paths."
+  }
 }
 
 variable "tags" {
@@ -118,6 +128,12 @@ variable "agent_timeout" {
   description = "Timeout for QEMU guest agent operations (e.g., '15m' for 15 minutes)"
   type        = string
   default     = "1m"
+}
+
+variable "agent_wait_for_ip_disabled" {
+  description = "Skip QEMU guest agent IP discovery"
+  type        = bool
+  default     = false
 }
 
 variable "stop_on_destroy" {

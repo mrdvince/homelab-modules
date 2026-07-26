@@ -27,6 +27,13 @@ resource "proxmox_virtual_environment_vm" "instance" {
   agent {
     enabled = var.agent_enabled
     timeout = var.agent_timeout
+
+    dynamic "wait_for_ip" {
+      for_each = var.agent_wait_for_ip_disabled ? [1] : []
+      content {
+        disabled = true
+      }
+    }
   }
 
   network_device {
@@ -38,13 +45,15 @@ resource "proxmox_virtual_environment_vm" "instance" {
   }
 
   disk {
-    datastore_id = var.disk.storage
-    size         = var.disk.size
-    interface    = var.disk.interface
-    file_format  = var.disk.format
-    discard      = var.disk.discard
-    ssd          = var.disk.ssd
-    iothread     = var.disk.iothread
+    datastore_id      = each.value.disk_path == null ? var.disk.storage : ""
+    path_in_datastore = each.value.disk_path
+    size              = each.value.disk_path == null ? var.disk.size : null
+    interface         = var.disk.interface
+    file_format       = each.value.disk_path == null ? var.disk.format : null
+    discard           = var.disk.discard
+    ssd               = var.disk.ssd
+    iothread          = var.disk.iothread
+    replicate         = each.value.disk_path == null
   }
 
   cdrom {
