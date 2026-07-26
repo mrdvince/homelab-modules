@@ -7,6 +7,10 @@ resource "null_resource" "upgrade_talos" {
     target_version  = var.talos_version
   }
 
+  lifecycle {
+    ignore_changes = [triggers["nodes"]]
+  }
+
   provisioner "local-exec" {
     quiet = true
 
@@ -68,6 +72,13 @@ resource "null_resource" "upgrade_kubernetes" {
     kubernetes_version = var.kubernetes_version
     talos_nodes        = jsonencode(concat(var.controlplane_nodes, local.worker_node_endpoints))
     talos_version      = var.talos_version
+  }
+
+  lifecycle {
+    ignore_changes = [
+      triggers["external_nodes"],
+      triggers["talos_nodes"],
+    ]
   }
 
   provisioner "local-exec" {
