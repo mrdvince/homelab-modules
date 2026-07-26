@@ -142,6 +142,12 @@ variable "stop_on_destroy" {
   default     = true
 }
 
+variable "reboot_after_update" {
+  description = "Allow the provider to reboot or power off the VM when an update requires it"
+  type        = bool
+  default     = true
+}
+
 variable "os_type" {
   description = "OS type (l26 for Linux 2.6+)"
   type        = string

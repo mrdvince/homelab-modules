@@ -3,14 +3,15 @@ resource "proxmox_virtual_environment_vm" "instance" {
     for instance in var.instances : instance.vmname => instance
   }
 
-  name            = each.key
-  node_name       = var.node_name
-  vm_id           = each.value.vmid
-  tags            = distinct(concat(var.tags, var.include_vmname_tag ? [each.key] : [], lookup(var.instance_tags, each.key, [])))
-  on_boot         = var.on_boot
-  machine         = var.machine
-  bios            = var.bios
-  stop_on_destroy = var.stop_on_destroy
+  name                = each.key
+  node_name           = var.node_name
+  vm_id               = each.value.vmid
+  tags                = distinct(concat(var.tags, var.include_vmname_tag ? [each.key] : [], lookup(var.instance_tags, each.key, [])))
+  on_boot             = var.on_boot
+  machine             = var.machine
+  bios                = var.bios
+  stop_on_destroy     = var.stop_on_destroy
+  reboot_after_update = var.reboot_after_update
 
   cpu {
     cores   = coalesce(each.value.resources.cores, var.cores)
