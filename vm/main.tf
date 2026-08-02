@@ -6,6 +6,7 @@ resource "proxmox_virtual_environment_vm" "instance" {
   name                = each.key
   node_name           = var.node_name
   vm_id               = each.value.vmid
+  boot_order          = var.boot_order
   tags                = distinct(concat(var.tags, var.include_vmname_tag ? [each.key] : [], lookup(var.instance_tags, each.key, [])))
   on_boot             = var.on_boot
   machine             = var.machine

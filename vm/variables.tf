@@ -70,6 +70,12 @@ variable "on_boot" {
   default     = true
 }
 
+variable "boot_order" {
+  description = "VM boot device order"
+  type        = list(string)
+  default     = null
+}
+
 variable "machine" {
   description = "Machine type (pc or q35)"
   type        = string

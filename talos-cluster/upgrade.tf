@@ -4,6 +4,7 @@ resource "null_resource" "upgrade_talos" {
   triggers = {
     installer_image = data.talos_image_factory_urls.this.urls.installer
     nodes           = jsonencode(concat(var.controlplane_nodes, local.worker_node_endpoints))
+    schematic_id    = talos_image_factory_schematic.this.id
     target_version  = var.talos_version
   }
 
@@ -30,6 +31,12 @@ resource "null_resource" "upgrade_talos" {
           awk '/^Server:/{server=1} server && /Tag:/{print $2; exit}'
       }
 
+      schematic_id() {
+        talosctl --nodes "$1" get extensions --output json 2>/dev/null |
+          jq -r 'select(.spec.metadata.name == "schematic") | .spec.metadata.version' |
+          head -n 1
+      }
+
       for node in $(printf '%s' "$TALOS_NODES" | jq -r '.[]'); do
         current_version=$(server_version "$node")
         if [ -z "$current_version" ]; then
@@ -37,11 +44,12 @@ resource "null_resource" "upgrade_talos" {
           exit 1
         fi
 
-        if [ "$current_version" != "$TALOS_VERSION" ]; then
-          echo "upgrading $node from Talos $current_version to $TALOS_VERSION..."
+        current_schematic_id=$(schematic_id "$node")
+        if [ "$current_version" != "$TALOS_VERSION" ] || [ "$current_schematic_id" != "$SCHEMATIC_ID" ]; then
+          echo "upgrading $node from Talos $current_version schematic $current_schematic_id to Talos $TALOS_VERSION schematic $SCHEMATIC_ID..."
           talosctl --nodes "$node" upgrade --image "$INSTALLER_IMAGE" --drain=false
         else
-          echo "$node is already running Talos $TALOS_VERSION"
+          echo "$node is already running Talos $TALOS_VERSION schematic $SCHEMATIC_ID"
         fi
 
         node_name=$(node_name_for_endpoint "$node")
@@ -56,6 +64,7 @@ resource "null_resource" "upgrade_talos" {
 
     environment = {
       INSTALLER_IMAGE = data.talos_image_factory_urls.this.urls.installer
+      SCHEMATIC_ID    = talos_image_factory_schematic.this.id
       TALOS_NODES     = jsonencode(concat(var.controlplane_nodes, local.worker_node_endpoints))
       TALOS_VERSION   = var.talos_version
     }
